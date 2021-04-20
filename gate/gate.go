@@ -1,11 +1,10 @@
 package gate
 
 import (
-	"github.com/name5566/leaf/chanrpc"
+	"github.com/golang/protobuf/proto"
 	"github.com/name5566/leaf/log"
 	"github.com/name5566/leaf/network"
 	"net"
-	"reflect"
 	"time"
 )
 
@@ -13,8 +12,6 @@ type Gate struct {
 	MaxConnNum      int
 	PendingWriteNum int
 	MaxMsgLen       uint32
-	Processor       network.Processor
-	AgentChanRPC    *chanrpc.Server
 
 	// websocket
 	WSAddr      string
@@ -26,9 +23,22 @@ type Gate struct {
 	TCPAddr      string
 	LenMsgLen    int
 	LittleEndian bool
+
+	// agent
+	GoLen              int
+	TimerDispatcherLen int
+	AsynCallLen        int
+	ChanRPCLen         int
+	OnAgentInit 	   func(Agent)
+	OnAgentDestroy 	   func(Agent)
 }
 
 func (gate *Gate) Run(closeSig chan bool) {
+	newAgent := func(conn network.Conn) network.Agent {
+		a := &agent{conn: conn, gate: gate}
+		return a
+	}
+
 	var wsServer *network.WSServer
 	if gate.WSAddr != "" {
 		wsServer = new(network.WSServer)
@@ -40,11 +50,7 @@ func (gate *Gate) Run(closeSig chan bool) {
 		wsServer.CertFile = gate.CertFile
 		wsServer.KeyFile = gate.KeyFile
 		wsServer.NewAgent = func(conn *network.WSConn) network.Agent {
-			a := &agent{conn: conn, gate: gate}
-			if gate.AgentChanRPC != nil {
-				gate.AgentChanRPC.Go("NewAgent", a)
-			}
-			return a
+			return newAgent(conn)
 		}
 	}
 
@@ -58,11 +64,7 @@ func (gate *Gate) Run(closeSig chan bool) {
 		tcpServer.MaxMsgLen = gate.MaxMsgLen
 		tcpServer.LittleEndian = gate.LittleEndian
 		tcpServer.NewAgent = func(conn *network.TCPConn) network.Agent {
-			a := &agent{conn: conn, gate: gate}
-			if gate.AgentChanRPC != nil {
-				gate.AgentChanRPC.Go("NewAgent", a)
-			}
-			return a
+			return newAgent(conn)
 		}
 	}
 
@@ -81,7 +83,9 @@ func (gate *Gate) Run(closeSig chan bool) {
 	}
 }
 
-func (gate *Gate) OnDestroy() {}
+func (gate *Gate) OnDestroy() {
+
+}
 
 type agent struct {
 	conn     network.Conn
@@ -90,6 +94,13 @@ type agent struct {
 }
 
 func (a *agent) Run() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("%v",r)
+		}
+	}()
+
+
 	for {
 		data, err := a.conn.ReadMsg()
 		if err != nil {
@@ -97,41 +108,42 @@ func (a *agent) Run() {
 			break
 		}
 
-		if a.gate.Processor != nil {
-			msg, err := a.gate.Processor.Unmarshal(data)
-			if err != nil {
-				log.Debug("unmarshal message error: %v", err)
-				break
-			}
-			err = a.gate.Processor.Route(msg, a)
-			if err != nil {
-				log.Debug("route message error: %v", err)
-				break
-			}
+		msg,handler := Unmarshal(data)
+		if msg == nil {
+			continue
 		}
+
+		handler.Route(a,msg)
+		if msg.head.Type != MessageType_Request {
+			continue
+		}
+
+		bytes,err := Marshal(MessageType_Response,msg.head.ID,msg.Error,msg.ReplyMsg)
+		if err != nil {
+			log.Debug("handle message: %v", err)
+			break
+		}
+		a.WriteMsg(bytes)
 	}
 }
 
 func (a *agent) OnClose() {
-	if a.gate.AgentChanRPC != nil {
-		err := a.gate.AgentChanRPC.Call0("CloseAgent", a)
-		if err != nil {
-			log.Error("chanrpc error: %v", err)
-		}
-	}
+
 }
 
-func (a *agent) WriteMsg(msg interface{}) {
-	if a.gate.Processor != nil {
-		data, err := a.gate.Processor.Marshal(msg)
-		if err != nil {
-			log.Error("marshal message %v error: %v", reflect.TypeOf(msg), err)
-			return
-		}
-		err = a.conn.WriteMsg(data...)
-		if err != nil {
-			log.Error("write message %v error: %v", reflect.TypeOf(msg), err)
-		}
+func (a agent) Notify(msg proto.Message) {
+	bytes,err := Marshal(MessageType_Notify,0,0,msg)
+	if err != nil {
+		log.Debug("handle message: %v", err)
+		return
+	}
+	a.WriteMsg(bytes)
+}
+
+func (a *agent) WriteMsg(data [][]byte) {
+	err := a.conn.WriteMsg(data...)
+	if err != nil {
+		log.Error("write message error: %v", err)
 	}
 }
 
@@ -158,3 +170,5 @@ func (a *agent) UserData() interface{} {
 func (a *agent) SetUserData(data interface{}) {
 	a.userData = data
 }
+
+

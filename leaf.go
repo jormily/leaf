@@ -10,7 +10,7 @@ import (
 	"os/signal"
 )
 
-func Run(mods ...module.Module) {
+func Run(mods ...module.IModule) {
 	// logger
 	if conf.LogLevel != "" {
 		logger, err := log.New(conf.LogLevel, conf.LogPath, conf.LogFlag)

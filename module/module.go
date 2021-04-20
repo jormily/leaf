@@ -7,21 +7,21 @@ import (
 	"sync"
 )
 
-type Module interface {
+type IModule interface {
 	OnInit()
 	OnDestroy()
 	Run(closeSig chan bool)
 }
 
 type module struct {
-	mi       Module
+	mi       IModule
 	closeSig chan bool
 	wg       sync.WaitGroup
 }
 
 var mods []*module
 
-func Register(mi Module) {
+func Register(mi IModule) {
 	m := new(module)
 	m.mi = mi
 	m.closeSig = make(chan bool, 1)
