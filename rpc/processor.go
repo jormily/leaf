@@ -3,6 +3,7 @@ package rpc
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	. "github.com/name5566/leaf/pb"
 	"github.com/name5566/leaf/log"
 	"reflect"
 )

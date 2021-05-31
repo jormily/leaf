@@ -83,7 +83,11 @@ func (gate *Gate) Run(closeSig chan bool) {
 	}
 }
 
-func (gate *Gate) OnDestroy() {
+func (gate *Gate) Init(Service interface{}) {
+
+}
+
+func (gate *Gate) Destroy() {
 
 }
 
@@ -112,6 +116,7 @@ func (a *agent) Run() {
 		if msg == nil {
 			continue
 		}
+		msg.Service = a.gate
 
 		handler.Route(a,msg)
 		if msg.head.Type != MessageType_Request {

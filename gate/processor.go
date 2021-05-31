@@ -24,7 +24,7 @@ var handlerMap = map[uint16]*Handler{}
 func Register(requestMsg proto.Message,replyMsg proto.Message,handler func(a Agent,msg *Message)) {
 	requestType := reflect.TypeOf(requestMsg)
 	if !common.CheckMessage(requestType) {
-		log.Error("")
+		log.Error("Register requestType:%v check message err",requestType)
 		return
 	}
 
@@ -32,14 +32,14 @@ func Register(requestMsg proto.Message,replyMsg proto.Message,handler func(a Age
 	if replyMsg != nil {
 		replyType = reflect.TypeOf(replyMsg)
 		if !common.CheckMessage(replyType) {
-			log.Error("s")
+			log.Error("Register replyType:%v check message err",replyType)
 			return
 		}
 	}
 
 	requestId := common.GetMessageId(requestType)
 	if _,ok := handlerMap[requestId];ok {
-		log.Error("")
+		log.Error("Register handler of %v exist",requestId)
 		return
 	}
 
@@ -60,7 +60,7 @@ func Register(requestMsg proto.Message,replyMsg proto.Message,handler func(a Age
 func (h *Handler) Route(a Agent,msg *Message) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error("route [%v-%v] error~",msg.head.MsgId,msg.head.ID)
+			log.Error("Route [%v-%v] error~",msg.head.MsgId,msg.head.ID)
 		}
 	}()
 
@@ -76,7 +76,6 @@ func Unmarshal(data []byte) (*Message,*Handler) {
 	msg := &Message{}
 	msg.head.Type = MessageType(data[0])
 	msg.head.ID = binary.LittleEndian.Uint32(data[1:5])
-	//msg.Error = binary.LittleEndian.Uint32(data[5:9])
 	msg.head.MsgId = binary.LittleEndian.Uint16(data[9:11])
 	if msg.head.Type != MessageType_Request && msg.head.Type != MessageType_Push {
 		return nil,nil

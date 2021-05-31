@@ -1,43 +1,62 @@
 package module
 
 import (
-	//"reflect"
 	"github.com/name5566/leaf/rpc"
+	"github.com/name5566/leaf/timer"
+	"time"
 )
 
+type Module struct {
+	TimerDispatcherLen int
+	AsynCallLen        int
 
-type IModel interface {
-	Run()
+	rpcHandler 		*rpc.RpcHandler
+	dispatcher      *timer.Dispatcher
 }
 
-type Model struct {
-	*rpc.RpcHandler
-}
-
-func NewModel() *Model {
-	m := new(Model)
-	m.RpcHandler = new(rpc.RpcHandler)
+func NewModule() *Module {
+	m := new(Module)
+	m.rpcHandler = new(rpc.RpcHandler)
+	m.dispatcher = timer.NewDispatcher(m.TimerDispatcherLen)
 	return m
 }
 
-func (m *Model) Init(model interface{},rpcChanLen int) {
-	m.RpcHandler.Init(model,rpcChanLen)
+func (m *Module) Init(Module interface{},rpcChanLen int) {
+	m.rpcHandler.Init(Module,rpcChanLen)
 }
 
-func (m *Model) OnClose() {
-	m.RpcHandler.OnClose()
+func (m *Module) OnClose() {
+	m.rpcHandler.OnClose()
 }
 
-func (this *Model) Run(closeSig chan bool) {
+func (this *Module) Run(closeSig chan bool) {
 	for {
 		select {
 		case <-closeSig:
 			return
-		case c := <-this.GetRpcCallChan():
-			this.Exec(c)
-		case c := <- this.GetRpcCastChan():
-			this.Exec(c)
+		case c := <- this.rpcHandler.GetRpcCallChan():
+			this.rpcHandler.Exec(c)
+		case c := <- this.rpcHandler.GetRpcCastChan():
+			this.rpcHandler.Exec(c)
+		case t := <-this.dispatcher.ChanTimer:
+			t.Cb()
 		}
 	}
 }
 
+
+func (m *Module) AfterFunc(d time.Duration, cb func()) *timer.Timer {
+	if m.TimerDispatcherLen == 0 {
+		panic("invalid TimerDispatcherLen")
+	}
+
+	return m.dispatcher.AfterFunc(d, cb)
+}
+
+func (m *Module) CronFunc(cronExpr *timer.CronExpr, cb func()) *timer.Cron {
+	if m.TimerDispatcherLen == 0 {
+		panic("invalid TimerDispatcherLen")
+	}
+
+	return m.dispatcher.CronFunc(cronExpr, cb)
+}

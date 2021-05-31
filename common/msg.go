@@ -10,10 +10,17 @@ var mapId2Message = map[uint16]reflect.Type{}
 var registerOnce sync.Once
 
 
+
+
 func Register(msg2id map[reflect.Type]uint16,id2msg map[uint16]reflect.Type)  {
 	registerOnce.Do(func() {
-		mapMessage2Id = msg2id
-		mapId2Message = id2msg
+		for k,v := range msg2id {
+			mapMessage2Id[k] = v
+		}
+
+		for k,v := range id2msg {
+			mapId2Message[k] = v
+		}
 	})
 }
 

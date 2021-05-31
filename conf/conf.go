@@ -9,9 +9,11 @@ var (
 	LogFlag  int
 
 	// console
-	ConsolePort   int
-	ConsolePrompt string = "Leaf# "
-	ProfilePath   string
+	ConsolePort   	int
+	ConsolePrompt 	string = "Leaf# "
+	ProfilePath   	string
+	IsMaster	  	bool
+	MasterAddr 		string
 
 	// cluster
 	ListenAddr      string

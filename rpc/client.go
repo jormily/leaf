@@ -34,3 +34,7 @@ func (this *Client) Init(addr string,pendingWriteNum int) {
 	this.rpcClient.Start()
 }
 
+func (this *Client) Close() {
+
+}
+

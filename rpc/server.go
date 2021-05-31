@@ -33,3 +33,7 @@ func (this *Server) Init(addr string, pendingWriteNum int) {
 
 	this.rpcServer.Start()
 }
+
+func (this *Server) Close() {
+
+}

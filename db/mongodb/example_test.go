@@ -2,12 +2,11 @@ package mongodb_test
 
 import (
 	"fmt"
-	"github.com/name5566/leaf/db/mongodb"
 	"gopkg.in/mgo.v2"
 )
 
 func Example() {
-	c, err := mongodb.Dial("localhost", 10)
+	c, err := Dial("localhost", 10)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -7,6 +7,7 @@ import (
 	"github.com/name5566/leaf/common"
 	"github.com/name5566/leaf/log"
 	"github.com/name5566/leaf/network"
+	. "github.com/name5566/leaf/pb"
 	"reflect"
 	"sync"
 )

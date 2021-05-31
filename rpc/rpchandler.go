@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/name5566/leaf/common"
+	. "github.com/name5566/leaf/pb"
 	"github.com/name5566/leaf/log"
 	"reflect"
 	"strings"

@@ -1,6 +1,9 @@
 package gate
 
-import "github.com/golang/protobuf/proto"
+import (
+	"github.com/golang/protobuf/proto"
+	"github.com/name5566/leaf/service"
+)
 
 type MessageType byte
 
@@ -23,4 +26,5 @@ type Message struct {
 	RequestMsg 	proto.Message
 	ReplyMsg   	proto.Message
 	Error 		uint32
+	Service  	service.IService
 }
