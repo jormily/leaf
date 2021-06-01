@@ -1,0 +1,41 @@
+package pb;
+option go_package ="pb";
+
+enum RpcMsgType
+{
+    Heart = 1;
+    Request = 2;
+    Response = 3;
+    Router = 4;
+}
+
+message RpcRequest
+{
+  optional uint32 rid = 1;
+  optional string method = 2;
+  optional bytes data = 3;
+}
+
+message RpcResponse
+{
+  optional uint32 rid = 1;
+  optional string err = 2;
+  optional bytes data = 3;
+}
+
+message RpcHeart
+{
+
+}
+
+message RpcRouterItem
+{
+  optional string method = 1;
+  optional uint32 reqMsgId = 2;
+  optional uint32 replyMsgId = 3;
+}
+
+message RpcRouter
+{
+  repeated RpcRouterItem items = 1;
+}

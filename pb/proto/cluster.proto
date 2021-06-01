@@ -1,0 +1,43 @@
+package pb;
+option go_package ="pb";
+import "rpc.proto";
+
+//message RpcRouterItem
+//{
+//  optional string method = 1;
+//  optional uint32 reqMsgId = 2;
+//  optional uint32 replyMsgId = 3;
+//}
+//
+//message RpcRouter
+//{
+//  repeated RpcRouterItem items = 1;
+//}
+
+//3秒上传一次到center服务器
+message ServerStatus
+{
+  optional string addr = 1;
+  optional int32 load = 2;
+  optional int32 sid = 3;
+  optional string stype = 4;
+}
+
+message HeartRequest
+{
+  optional uint32 version = 1;
+  optional ServerStatus status = 2;
+}
+
+message HeartRespose
+{
+  optional uint32 version = 1;
+  repeated ServerStatus statusList = 2;
+}
+
+
+
+//message RpcHeart
+//{
+//
+//}
