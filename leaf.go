@@ -27,6 +27,8 @@ func Run(servs ...service.IService) {
 	for i := 0; i < len(servs); i++ {
 		service.Register(servs[i])
 	}
+	cluster.Register()
+
 	service.Init()
 
 	// cluster

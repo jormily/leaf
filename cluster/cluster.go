@@ -1,49 +1,75 @@
 package cluster
 
 import (
+	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/name5566/leaf/conf"
-	"github.com/name5566/leaf/network"
+	"github.com/name5566/leaf/pb"
 	"github.com/name5566/leaf/rpc"
 	"github.com/name5566/leaf/service"
+	"sync"
 )
+
 
 var (
-	rpcServer  		*rpc.Server
-	rpcMasterClient	*rpc.Client
-	rpcClients 		[]*rpc.Client
+	rpcServer  				*rpc.Server
+	rpcMasterClient			*rpc.Client
+	rpcClients 				map[int32]*rpc.Client
+
+	statusLock				sync.Mutex
+	NodeInfos				[]*NodeInfo
+	statusVersion 			uint32 = 0
+	statusLocal				*pb.ServerStatus
+
+	masterSvr				*Master
+	masterClientSvr			*MasterClient
 )
 
-func Init() {
+func init() {
+
+}
+
+func Register() {
 	if conf.ListenAddr != "" {
 		rpcServer = new(rpc.Server)
 		rpcServer.Init(conf.ListenAddr,conf.PendingWriteNum)
 	}
 
-	if conf.IsMaster {
-		m := NewMaster()
-		service.Register(m)
-	}else{
-		rpcMasterClient = new(rpc.Client)
-		rpcMasterClient.Init(conf.MasterAddr,conf.PendingWriteNum)
-		m := NewMasterClient()
-		service.Register(m)
+	NodeInfos = []*NodeInfo{}
+	statusLocal = &pb.ServerStatus{}
+	statusLocal.Addr = proto.String(conf.ListenAddr)
+	statusLocal.Sid = proto.Int32(conf.ServerId)
+	statusLocal.Stype = proto.String(conf.ServerType)
+	NodeInfos = append(NodeInfos, &NodeInfo{
+		ServerStatus: statusLocal,
+	})
+
+	if conf.ServerType != "master" {
+		status := &pb.ServerStatus{}
+		status.Addr = proto.String(conf.MasterAddr)
+		status.Stype = proto.String("master")
+		NodeInfos = append(NodeInfos, NewNodeInfo(status))
 	}
 
-	//for _, addr := range conf.ConnAddrs {
-	//	client := new(network.TCPClient)
-	//	client.Addr = addr
-	//	client.ConnNum = 1
-	//	client.ConnectInterval = 3 * time.Second
-	//	client.PendingWriteNum = conf.PendingWriteNum
-	//	client.LenMsgLen = 4
-	//	client.MaxMsgLen = math.MaxUint32
-	//	client.NewAgent = newAgent
-	//
-	//	client.Start()
-	//	clients = append(clients, client)
-	//}
 
+	if conf.ServerType == "master" {
+		statusVersion = 1
+		masterSvr = NewMaster()
+		service.Register(masterSvr)
+	}else{
+		masterClientSvr = NewMasterClient()
+		service.Register(masterClientSvr)
+	}
 }
+
+
+func Init() {
+	//
+	if conf.ServerType != "master" {
+		masterClientSvr.OnInit()
+	}
+}
+
 
 func Destroy() {
 	if rpcServer != nil {
@@ -55,16 +81,37 @@ func Destroy() {
 	}
 }
 
-type Agent struct {
-	conn *network.TCPConn
+func Call(stype string,method string,requestMsg interface{}) (interface{},error) {
+	nodes := GetNodeByType(stype)
+	if len(nodes) == 0 {
+		return nil,fmt.Errorf("Call method %v.%v,not find node",stype,method)
+	}
+
+	return nodes[0].Call(method,requestMsg)
 }
 
-func newAgent(conn *network.TCPConn) network.Agent {
-	a := new(Agent)
-	a.conn = conn
-	return a
+func Cast(stype string,method string,requestMsg interface{}) (error) {
+	nodes := GetNodeByType(stype)
+	if len(nodes) == 0 {
+		return fmt.Errorf("Call method %v.%v,not find node",stype,method)
+	}
+
+	return nodes[0].Cast(method,requestMsg)
 }
 
-func (a *Agent) Run() {}
+func BroadCast(stype string,method string,requestMsg interface{}) {
+	nodes := GetNodeByType(stype)
+	for _,node := range nodes {
+		node.Cast(method,requestMsg)
+	}
+}
 
-func (a *Agent) OnClose() {}
+func BroadCastAll(method string,requestMsg interface{},sids...interface{}) {
+	for _,node := range NodeInfos {
+		for _,sid := range sids {
+			if sid != node.GetSid() {
+				node.Cast(method,requestMsg)
+			}
+		}
+	}
+}

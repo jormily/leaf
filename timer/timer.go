@@ -21,6 +21,9 @@ func NewDispatcher(l int) *Dispatcher {
 // Timer
 type Timer struct {
 	t  *time.Timer
+	disp *Dispatcher
+	d   time.Duration
+	ct 	int32
 	cb func()
 }
 
@@ -31,7 +34,7 @@ func (t *Timer) Stop() {
 
 func (t *Timer) Cb() {
 	defer func() {
-		t.cb = nil
+		t.Stop()
 		if r := recover(); r != nil {
 			if conf.LenStackBuf > 0 {
 				buf := make([]byte, conf.LenStackBuf)
@@ -44,13 +47,33 @@ func (t *Timer) Cb() {
 	}()
 
 	if t.cb != nil {
+		if t.ct == 1 {
+			t.cb()
+			return
+		}
+
+		if t.ct > 1 {
+			t.ct--
+		}
 		t.cb()
+		t.disp.AfterFunc(t.d,t.cb,t.ct)
 	}
 }
 
-func (disp *Dispatcher) AfterFunc(d time.Duration, cb func()) *Timer {
+func (disp *Dispatcher) AfterFunc(d time.Duration, cb func(),ct...int32) *Timer {
 	t := new(Timer)
 	t.cb = cb
+	if len(ct) == 0 {
+		t.ct = 0
+	}else{
+		t.ct = ct[0]
+		if t.ct < 0 {
+			t.ct = 0
+		}
+	}
+	t.d = d
+	t.disp = disp
+
 	t.t = time.AfterFunc(d, func() {
 		disp.ChanTimer <- t
 	})

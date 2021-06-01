@@ -45,12 +45,12 @@ func (this *Module) Run(closeSig chan bool) {
 }
 
 
-func (m *Module) AfterFunc(d time.Duration, cb func()) *timer.Timer {
+func (m *Module) AfterFunc(d time.Duration, cb func(),ct...int32) *timer.Timer {
 	if m.TimerDispatcherLen == 0 {
 		panic("invalid TimerDispatcherLen")
 	}
 
-	return m.dispatcher.AfterFunc(d, cb)
+	return m.dispatcher.AfterFunc(d, cb, ct...)
 }
 
 func (m *Module) CronFunc(cronExpr *timer.CronExpr, cb func()) *timer.Cron {

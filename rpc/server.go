@@ -24,7 +24,7 @@ func (this *Server) Init(addr string, pendingWriteNum int) {
 	this.rpcServer.LenMsgLen = 4
 	this.rpcServer.MaxMsgLen = math.MaxUint32
 	this.rpcServer.NewAgent = func(conn *network.TCPConn) network.Agent {
-		agent := newAgent(conn)
+		agent := newAgent(conn,nil)
 		rpcRouterLocker.RLock()
 		agent.(*Agent).WriteMsg(rpcRouter)
 		rpcRouterLocker.RUnlock()

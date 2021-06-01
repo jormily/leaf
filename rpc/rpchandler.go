@@ -74,8 +74,10 @@ func (r *RpcHandler) IsRpcHandler(m reflect.Method) bool {
 		return true
 	}
 
-	if methodType.NumOut() == 2 && common.CheckMessage(methodType.Out(0)) && methodType.Out(1).Kind() == reflect.Interface {
-		return true
+	if methodType.NumOut() == 2 && methodType.Out(1).Kind() == reflect.Interface {
+		if common.CheckMessage(methodType.Out(0)) {
+			return true
+		}
 	}
 
 	return false

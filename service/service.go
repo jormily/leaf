@@ -11,6 +11,7 @@ const (
 )
 
 type Service struct {
+	OnRun 			func()
 	rpcHandler 		*rpc.RpcHandler
 	dispatcher      *timer.Dispatcher
 }
@@ -24,6 +25,7 @@ func NewService() *Service {
 
 func (s *Service) Init(Service interface{}) {
 	s.rpcHandler.Init(Service,100)
+
 }
 
 func (s *Service) Destroy() {
@@ -31,6 +33,9 @@ func (s *Service) Destroy() {
 }
 
 func (this *Service) Run(closeSig chan bool) {
+	if this.OnRun != nil {
+		this.OnRun()
+	}
 	for {
 		select {
 		case <-closeSig:
@@ -46,8 +51,8 @@ func (this *Service) Run(closeSig chan bool) {
 }
 
 
-func (s *Service) AfterFunc(d time.Duration, cb func()) *timer.Timer {
-	return s.dispatcher.AfterFunc(d, cb)
+func (s *Service) AfterFunc(d time.Duration, cb func(),ct...int32) *timer.Timer {
+	return s.dispatcher.AfterFunc(d, cb, ct...)
 }
 
 func (s *Service) CronFunc(cronExpr *timer.CronExpr, cb func()) *timer.Cron {

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"github.com/name5566/leaf/pb"
 	"reflect"
 	"sync"
 )
@@ -9,6 +10,14 @@ var mapMessage2Id = map[reflect.Type]uint16{}
 var mapId2Message = map[uint16]reflect.Type{}
 var registerOnce sync.Once
 
+
+func init() {
+	mapMessage2Id[reflect.TypeOf(&pb.HeartRequest{})] = 1
+	mapMessage2Id[reflect.TypeOf(&pb.HeartRespose{})] = 2
+
+	mapId2Message[1] = reflect.TypeOf(&pb.HeartRequest{})
+	mapId2Message[2] = reflect.TypeOf(&pb.HeartRespose{})
+}
 
 
 

@@ -24,6 +24,7 @@ type Agent struct {
 	conn 		network.Conn
 	server 		*Server
 	userData 	interface{}
+	OnConnected func(a *Agent)
 
 	sync.Mutex
 
@@ -35,12 +36,17 @@ type Agent struct {
 }
 
 
-func newAgent(conn *network.TCPConn) network.Agent {
+func newAgent(conn *network.TCPConn,connectFunc func(a *Agent)) network.Agent {
 	agent := new(Agent)
 	agent.conn = conn
 	agent.requests = make(map[uint32]*CallInfo)
 	agent.router = make(map[string]*RouterItem)
+	agent.OnConnected = connectFunc
 	return agent
+}
+
+func (a *Agent) SetOnConnect(onConnected func(a *Agent)){
+	a.OnConnected = onConnected
 }
 
 func (a *Agent) getRid() uint32 {
@@ -115,7 +121,7 @@ func (a *Agent) makeCallInfo(cid uint32,method string,reqMsg proto.Message,reply
 	return callInfo
 }
 
-func (a *Agent) Call(method string,reqMsg proto.Message) (proto.Message,error) {
+func (a *Agent) Call(method string,reqMsg interface{}) (interface{},error) {
 	//a.Lock()
 	//defer a.Unlock()
 
@@ -130,8 +136,8 @@ func (a *Agent) Call(method string,reqMsg proto.Message) (proto.Message,error) {
 		return nil, fmt.Errorf("rpc call ReqType = %v ReplyType = %v",route.ReqType, route.ReplyType)
 	}
 	replyMsg := reflect.New(route.ReplyType.Elem()).Interface()
-	msg := a.makeRpcRequest(method,reqMsg,true)
-	c := a.makeCallInfo(msg.GetRid(),method,reqMsg,replyMsg.(proto.Message))
+	msg := a.makeRpcRequest(method,reqMsg.(proto.Message),true)
+	c := a.makeCallInfo(msg.GetRid(),method,reqMsg.(proto.Message),replyMsg.(proto.Message))
 
 	a.WriteMsg(msg)
 	done := <- c.done
@@ -140,7 +146,7 @@ func (a *Agent) Call(method string,reqMsg proto.Message) (proto.Message,error) {
 }
 
 
-func (a *Agent) Cast(method string,reqMsg proto.Message) error {
+func (a *Agent) Cast(method string,reqMsg interface{}) error {
 	//a.Lock()
 	//defer a.Unlock()
 
@@ -155,8 +161,8 @@ func (a *Agent) Cast(method string,reqMsg proto.Message) error {
 		return fmt.Errorf("rpc cast ReqType = %v", route.ReplyType)
 	}
 
-	msg := a.makeRpcRequest(method,reqMsg,false)
-	a.makeCallInfo(msg.GetRid(),method,reqMsg,nil)
+	msg := a.makeRpcRequest(method,reqMsg.(proto.Message),false)
+	a.makeCallInfo(msg.GetRid(),method,reqMsg.(proto.Message),nil)
 
 	a.WriteMsg(msg)
 	
@@ -270,6 +276,9 @@ func (a *Agent) OnRouter(msg proto.Message)  (proto.Message,error) {
 		a.router[v.GetMethod()] = item
 	}
 
-	Clients = append(Clients,a)
+	if a.OnConnected != nil {
+		a.OnConnected(a)
+	}
+	//Clients = append(Clients,a)
 	return nil,nil
 }

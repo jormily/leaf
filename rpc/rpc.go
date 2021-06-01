@@ -65,7 +65,7 @@ func CallLocal(name string,requestMsg interface{}) (interface{},error) {
 	rpcHandler.GetRpcCallChan()<-rpcCall
 	<-rpcCall.done
 
-	return rpcCall.replyMsg,rpcCall.err
+	return rpcCall.replyMsg.Interface(),rpcCall.err
 }
 
 
