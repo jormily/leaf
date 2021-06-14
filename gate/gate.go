@@ -1,12 +1,18 @@
 package gate
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/name5566/leaf/log"
+	. "github.com/name5566/leaf/msg"
 	"github.com/name5566/leaf/network"
 	"net"
+	"reflect"
+	"runtime"
 	"time"
 )
+
+var Processor = NewMsgProcessor()
 
 type Gate struct {
 	MaxConnNum      int
@@ -100,10 +106,12 @@ type agent struct {
 func (a *agent) Run() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("%v",r)
+			buf := make([]byte, 4096)
+			l := runtime.Stack(buf, true)
+			err := fmt.Errorf("%v: %s", r, buf[:l])
+			log.Error("error stack:%v \n",err)
 		}
 	}()
-
 
 	for {
 		data, err := a.conn.ReadMsg()
@@ -111,42 +119,52 @@ func (a *agent) Run() {
 			log.Debug("read message: %v", err)
 			break
 		}
-
-		msg,handler := Unmarshal(data)
-		if msg == nil {
-			continue
-		}
-		msg.Service = a.gate
-
-		handler.Route(a,msg)
-		if msg.head.Type != MessageType_Request {
-			continue
-		}
-
-		bytes,err := Marshal(MessageType_Response,msg.head.ID,msg.Error,msg.ReplyMsg)
-		if err != nil {
-			log.Debug("handle message: %v", err)
-			break
-		}
-		a.WriteMsg(bytes)
+		a.ProcessMsg(data)
 	}
+}
+
+func (a *agent) ProcessMsg(data []byte) {
+	request,err := Unmarshal(data)
+	if err != nil {
+		log.Error("unmarsh error:%v",err)
+		return
+	}
+
+	msg,err := Processor.Exec(a.gate,request)
+	if err != nil {
+		log.Error("exec error:%v",err)
+		return
+	}
+
+	bytes,err := Marshal(msg.Response)
+	if err != nil {
+		log.Error("marshal error: %v", err)
+		return
+	}
+	a.WriteMsg(bytes)
 }
 
 func (a *agent) OnClose() {
 
 }
 
-func (a agent) Notify(msg proto.Message) {
-	bytes,err := Marshal(MessageType_Notify,0,0,msg)
+func (a agent) SendMessage(data proto.Message) {
+	msg := NewMessage(0,data)
+	if msg == nil {
+		log.Error("msgid of %v not find",reflect.TypeOf(data).Name())
+		return
+	}
+
+	bytes,err := Marshal(msg)
 	if err != nil {
-		log.Debug("handle message: %v", err)
+		log.Debug("notify err: %v", err)
 		return
 	}
 	a.WriteMsg(bytes)
 }
 
-func (a *agent) WriteMsg(data [][]byte) {
-	err := a.conn.WriteMsg(data...)
+func (a *agent) WriteMsg(data []byte) {
+	err := a.conn.WriteMsg(data)
 	if err != nil {
 		log.Error("write message error: %v", err)
 	}

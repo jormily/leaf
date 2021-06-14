@@ -13,11 +13,10 @@ It has these top-level messages:
 	ServerStatus
 	HeartRequest
 	HeartRespose
-	RpcRequest
-	RpcResponse
 	RpcHeart
-	RpcRouterItem
-	RpcRouter
+	RpcNil
+	RpcHandlers
+	RpcHandler
 */
 package pb
 

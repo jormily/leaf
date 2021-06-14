@@ -16,23 +16,20 @@ var _ = math.Inf
 type RpcMsgType int32
 
 const (
-	RpcMsgType_Heart    RpcMsgType = 1
-	RpcMsgType_Request  RpcMsgType = 2
-	RpcMsgType_Response RpcMsgType = 3
-	RpcMsgType_Router   RpcMsgType = 4
+	RpcMsgType_Nil      RpcMsgType = 1
+	RpcMsgType_Heart    RpcMsgType = 2
+	RpcMsgType_Handlers RpcMsgType = 3
 )
 
 var RpcMsgType_name = map[int32]string{
-	1: "Heart",
-	2: "Request",
-	3: "Response",
-	4: "Router",
+	1: "Nil",
+	2: "Heart",
+	3: "Handlers",
 }
 var RpcMsgType_value = map[string]int32{
-	"Heart":    1,
-	"Request":  2,
-	"Response": 3,
-	"Router":   4,
+	"Nil":      1,
+	"Heart":    2,
+	"Handlers": 3,
 }
 
 func (x RpcMsgType) Enum() *RpcMsgType {
@@ -53,72 +50,6 @@ func (x *RpcMsgType) UnmarshalJSON(data []byte) error {
 }
 func (RpcMsgType) EnumDescriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
 
-type RpcRequest struct {
-	Rid              *uint32 `protobuf:"varint,1,opt,name=rid" json:"rid,omitempty"`
-	Method           *string `protobuf:"bytes,2,opt,name=method" json:"method,omitempty"`
-	Data             []byte  `protobuf:"bytes,3,opt,name=data" json:"data,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
-}
-
-func (m *RpcRequest) Reset()                    { *m = RpcRequest{} }
-func (m *RpcRequest) String() string            { return proto.CompactTextString(m) }
-func (*RpcRequest) ProtoMessage()               {}
-func (*RpcRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
-
-func (m *RpcRequest) GetRid() uint32 {
-	if m != nil && m.Rid != nil {
-		return *m.Rid
-	}
-	return 0
-}
-
-func (m *RpcRequest) GetMethod() string {
-	if m != nil && m.Method != nil {
-		return *m.Method
-	}
-	return ""
-}
-
-func (m *RpcRequest) GetData() []byte {
-	if m != nil {
-		return m.Data
-	}
-	return nil
-}
-
-type RpcResponse struct {
-	Rid              *uint32 `protobuf:"varint,1,opt,name=rid" json:"rid,omitempty"`
-	Err              *string `protobuf:"bytes,2,opt,name=err" json:"err,omitempty"`
-	Data             []byte  `protobuf:"bytes,3,opt,name=data" json:"data,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
-}
-
-func (m *RpcResponse) Reset()                    { *m = RpcResponse{} }
-func (m *RpcResponse) String() string            { return proto.CompactTextString(m) }
-func (*RpcResponse) ProtoMessage()               {}
-func (*RpcResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{1} }
-
-func (m *RpcResponse) GetRid() uint32 {
-	if m != nil && m.Rid != nil {
-		return *m.Rid
-	}
-	return 0
-}
-
-func (m *RpcResponse) GetErr() string {
-	if m != nil && m.Err != nil {
-		return *m.Err
-	}
-	return ""
-}
-
-func (m *RpcResponse) GetData() []byte {
-	if m != nil {
-		return m.Data
-	}
-	return nil
-}
-
 type RpcHeart struct {
 	XXX_unrecognized []byte `json:"-"`
 }
@@ -126,84 +57,89 @@ type RpcHeart struct {
 func (m *RpcHeart) Reset()                    { *m = RpcHeart{} }
 func (m *RpcHeart) String() string            { return proto.CompactTextString(m) }
 func (*RpcHeart) ProtoMessage()               {}
-func (*RpcHeart) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{2} }
+func (*RpcHeart) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
 
-type RpcRouterItem struct {
+type RpcNil struct {
+	XXX_unrecognized []byte `json:"-"`
+}
+
+func (m *RpcNil) Reset()                    { *m = RpcNil{} }
+func (m *RpcNil) String() string            { return proto.CompactTextString(m) }
+func (*RpcNil) ProtoMessage()               {}
+func (*RpcNil) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{1} }
+
+type RpcHandlers struct {
+	Handlers         []*RpcHandler `protobuf:"bytes,1,rep,name=handlers" json:"handlers,omitempty"`
+	XXX_unrecognized []byte        `json:"-"`
+}
+
+func (m *RpcHandlers) Reset()                    { *m = RpcHandlers{} }
+func (m *RpcHandlers) String() string            { return proto.CompactTextString(m) }
+func (*RpcHandlers) ProtoMessage()               {}
+func (*RpcHandlers) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{2} }
+
+func (m *RpcHandlers) GetHandlers() []*RpcHandler {
+	if m != nil {
+		return m.Handlers
+	}
+	return nil
+}
+
+type RpcHandler struct {
 	Method           *string `protobuf:"bytes,1,opt,name=method" json:"method,omitempty"`
-	ReqMsgId         *uint32 `protobuf:"varint,2,opt,name=reqMsgId" json:"reqMsgId,omitempty"`
-	ReplyMsgId       *uint32 `protobuf:"varint,3,opt,name=replyMsgId" json:"replyMsgId,omitempty"`
+	RequestId        *uint32 `protobuf:"varint,2,opt,name=requestId" json:"requestId,omitempty"`
+	ReplyId          *uint32 `protobuf:"varint,3,opt,name=replyId" json:"replyId,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (m *RpcRouterItem) Reset()                    { *m = RpcRouterItem{} }
-func (m *RpcRouterItem) String() string            { return proto.CompactTextString(m) }
-func (*RpcRouterItem) ProtoMessage()               {}
-func (*RpcRouterItem) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{3} }
+func (m *RpcHandler) Reset()                    { *m = RpcHandler{} }
+func (m *RpcHandler) String() string            { return proto.CompactTextString(m) }
+func (*RpcHandler) ProtoMessage()               {}
+func (*RpcHandler) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{3} }
 
-func (m *RpcRouterItem) GetMethod() string {
+func (m *RpcHandler) GetMethod() string {
 	if m != nil && m.Method != nil {
 		return *m.Method
 	}
 	return ""
 }
 
-func (m *RpcRouterItem) GetReqMsgId() uint32 {
-	if m != nil && m.ReqMsgId != nil {
-		return *m.ReqMsgId
+func (m *RpcHandler) GetRequestId() uint32 {
+	if m != nil && m.RequestId != nil {
+		return *m.RequestId
 	}
 	return 0
 }
 
-func (m *RpcRouterItem) GetReplyMsgId() uint32 {
-	if m != nil && m.ReplyMsgId != nil {
-		return *m.ReplyMsgId
+func (m *RpcHandler) GetReplyId() uint32 {
+	if m != nil && m.ReplyId != nil {
+		return *m.ReplyId
 	}
 	return 0
-}
-
-type RpcRouter struct {
-	Items            []*RpcRouterItem `protobuf:"bytes,1,rep,name=items" json:"items,omitempty"`
-	XXX_unrecognized []byte           `json:"-"`
-}
-
-func (m *RpcRouter) Reset()                    { *m = RpcRouter{} }
-func (m *RpcRouter) String() string            { return proto.CompactTextString(m) }
-func (*RpcRouter) ProtoMessage()               {}
-func (*RpcRouter) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{4} }
-
-func (m *RpcRouter) GetItems() []*RpcRouterItem {
-	if m != nil {
-		return m.Items
-	}
-	return nil
 }
 
 func init() {
-	proto.RegisterType((*RpcRequest)(nil), "pb.RpcRequest")
-	proto.RegisterType((*RpcResponse)(nil), "pb.RpcResponse")
 	proto.RegisterType((*RpcHeart)(nil), "pb.RpcHeart")
-	proto.RegisterType((*RpcRouterItem)(nil), "pb.RpcRouterItem")
-	proto.RegisterType((*RpcRouter)(nil), "pb.RpcRouter")
+	proto.RegisterType((*RpcNil)(nil), "pb.RpcNil")
+	proto.RegisterType((*RpcHandlers)(nil), "pb.RpcHandlers")
+	proto.RegisterType((*RpcHandler)(nil), "pb.RpcHandler")
 	proto.RegisterEnum("pb.RpcMsgType", RpcMsgType_name, RpcMsgType_value)
 }
 
 func init() { proto.RegisterFile("rpc.proto", fileDescriptor1) }
 
 var fileDescriptor1 = []byte{
-	// 238 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x6c, 0x90, 0xbf, 0x4b, 0xc3, 0x50,
-	0x14, 0x85, 0xc9, 0x8f, 0xd6, 0xe4, 0xa4, 0x91, 0xe7, 0x9b, 0x32, 0x96, 0x4c, 0x45, 0x30, 0x83,
-	0x20, 0x6e, 0x0e, 0x82, 0x60, 0x07, 0x97, 0xe2, 0xe4, 0x96, 0x36, 0x17, 0x2d, 0x58, 0xdf, 0xed,
-	0x7d, 0xaf, 0x43, 0xff, 0x7b, 0x6f, 0x13, 0x15, 0x03, 0x1d, 0xcf, 0x83, 0xef, 0x3b, 0xe7, 0x5d,
-	0xe4, 0xc2, 0x9b, 0x86, 0xc5, 0x05, 0x67, 0x63, 0x5e, 0xd7, 0xf7, 0xc0, 0x8a, 0x37, 0x2b, 0xda,
-	0x1f, 0xc8, 0x07, 0x5b, 0x20, 0x91, 0x6d, 0x57, 0x45, 0xf3, 0x68, 0x51, 0xda, 0x4b, 0x4c, 0x77,
-	0x14, 0x3e, 0x5c, 0x57, 0xc5, 0x9a, 0x73, 0x3b, 0x43, 0xda, 0xb5, 0xa1, 0xad, 0x12, 0x4d, 0xb3,
-	0xfa, 0x0e, 0x45, 0x0f, 0x7a, 0x76, 0x5f, 0x9e, 0xc6, 0xa4, 0x06, 0x12, 0x39, 0x8b, 0x01, 0x99,
-	0x62, 0xcf, 0xd4, 0x4a, 0xa8, 0x9f, 0x50, 0x9e, 0x14, 0xee, 0x10, 0x48, 0x96, 0x81, 0x76, 0xff,
-	0x1a, 0xa3, 0x1e, 0x35, 0xc8, 0x84, 0xf6, 0x2f, 0xfe, 0x7d, 0x39, 0x6c, 0x28, 0xad, 0x05, 0x84,
-	0xf8, 0xf3, 0x38, 0xbc, 0x9d, 0x94, 0x65, 0x7d, 0x83, 0xfc, 0x4f, 0x63, 0xe7, 0x98, 0x6c, 0x55,
-	0xe5, 0xd5, 0x90, 0x2c, 0x8a, 0xdb, 0xab, 0x86, 0xd7, 0xcd, 0xa8, 0xe4, 0xfa, 0xa1, 0xff, 0xb1,
-	0x0a, 0x5e, 0x8f, 0x4c, 0x36, 0xc7, 0xa4, 0x1f, 0x63, 0x22, 0x5d, 0x7d, 0xf1, 0x73, 0x07, 0x13,
-	0xeb, 0xea, 0xec, 0xf7, 0x6f, 0x26, 0xd1, 0xd6, 0xe9, 0x60, 0x30, 0xe9, 0x63, 0xfa, 0xa6, 0x77,
-	0xfb, 0x0e, 0x00, 0x00, 0xff, 0xff, 0xa7, 0xbb, 0x38, 0xbd, 0x47, 0x01, 0x00, 0x00,
+	// 186 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x44, 0x8e, 0xbd, 0xae, 0x82, 0x40,
+	0x10, 0x85, 0x03, 0x7b, 0x2f, 0x2c, 0x83, 0x22, 0x4e, 0x45, 0x49, 0xb6, 0x22, 0x16, 0x6b, 0xe2,
+	0x13, 0x18, 0x2b, 0x2d, 0xb4, 0x30, 0x56, 0x76, 0xfc, 0x6c, 0xc4, 0x04, 0x65, 0x5d, 0xd6, 0x82,
+	0xb7, 0x77, 0x20, 0x1a, 0xba, 0x33, 0x5f, 0x4e, 0xe6, 0x7c, 0x10, 0x18, 0x5d, 0x4a, 0x6d, 0x5a,
+	0xdb, 0xa2, 0xab, 0x0b, 0x01, 0xc0, 0xcf, 0xba, 0xdc, 0xab, 0xdc, 0x58, 0xc1, 0xc1, 0xa3, 0x7c,
+	0xba, 0x37, 0x62, 0x0d, 0xe1, 0x40, 0xf3, 0x67, 0xd5, 0x28, 0xd3, 0x61, 0x0a, 0xbc, 0xfe, 0xe6,
+	0xc4, 0x49, 0x59, 0x16, 0x6e, 0x22, 0xa9, 0x0b, 0x39, 0x55, 0xc4, 0x16, 0x60, 0xba, 0x30, 0x02,
+	0xef, 0xa1, 0x6c, 0xdd, 0x56, 0xd4, 0x76, 0xb2, 0x00, 0x97, 0xb4, 0xaa, 0x5e, 0x6f, 0xd5, 0xd9,
+	0x43, 0x95, 0xb8, 0x84, 0xe6, 0xb8, 0x00, 0xdf, 0x28, 0xdd, 0xf4, 0x04, 0xd8, 0x00, 0x56, 0x72,
+	0xfc, 0x70, 0xec, 0x6e, 0x97, 0x5e, 0x2b, 0xf4, 0x81, 0x91, 0x47, 0xec, 0x60, 0x00, 0xff, 0xa3,
+	0x5c, 0xec, 0xe2, 0x0c, 0xf8, 0xcf, 0x28, 0x66, 0xbb, 0xbf, 0x2b, 0xe9, 0x7f, 0x02, 0x00, 0x00,
+	0xff, 0xff, 0xe8, 0xc7, 0xb0, 0xa0, 0xce, 0x00, 0x00, 0x00,
 }

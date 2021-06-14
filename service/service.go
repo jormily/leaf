@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/name5566/leaf/rpc"
+	"github.com/name5566/leaf/rpcx"
 	"github.com/name5566/leaf/timer"
+	"reflect"
 	"time"
 )
 
@@ -11,43 +12,62 @@ const (
 )
 
 type Service struct {
-	OnRun 			func()
-	rpcHandler 		*rpc.RpcHandler
+	serviceName 	string
+	OnStart 		func()
+	rpcChannel 		*rpcx.RpcChannel
 	dispatcher      *timer.Dispatcher
 }
 
 func NewService() *Service {
 	s := new(Service)
-	s.rpcHandler = new(rpc.RpcHandler)
+	s.rpcChannel = new(rpcx.RpcChannel)
 	s.dispatcher = timer.NewDispatcher(TimerDispatcherLen)
 	return s
 }
 
-func (s *Service) Init(Service interface{}) {
-	s.rpcHandler.Init(Service,100)
+func (s *Service) GetServiceType() string {
+	return reflect.TypeOf(s).Name()
+}
 
+func (s *Service) GetServiceName() string {
+	return s.serviceName
+}
+
+func (s *Service) SetServiceName(serviceName string) {
+	s.serviceName = serviceName
+}
+
+func (s *Service) Init(serv interface{}) {
+	//s.rpcHandler.Init(Service,100)
+	s.rpcChannel.Init(serv)
 }
 
 func (s *Service) Destroy() {
-	s.rpcHandler.OnClose()
+	s.rpcChannel.OnClose()
 }
 
 func (this *Service) Run(closeSig chan bool) {
-	if this.OnRun != nil {
-		this.OnRun()
+	if this.OnStart != nil {
+		this.OnStart()
 	}
 	for {
 		select {
 		case <-closeSig:
 			return
-		case c := <- this.rpcHandler.GetRpcCallChan():
-			this.rpcHandler.Exec(c)
-		case c := <- this.rpcHandler.GetRpcCastChan():
-			this.rpcHandler.Exec(c)
+		case c := <- this.rpcChannel.GetChannel():
+			this.rpcChannel.Cb(c)
+		//case c := <- this.rpcHandler.GetRpcCallChan():
+		//	this.rpcHandler.Exec(c)
+		//case c := <- this.rpcHandler.GetRpcCastChan():
+		//	this.rpcHandler.Exec(c)
 		case t := <-this.dispatcher.ChanTimer:
 			t.Cb()
 		}
 	}
+}
+
+func (s *Service) GetRpcChannel() *rpcx.RpcChannel {
+	return s.rpcChannel
 }
 
 

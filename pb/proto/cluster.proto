@@ -9,7 +9,7 @@ import "rpc.proto";
 //  optional uint32 replyMsgId = 3;
 //}
 //
-//message RpcRouter
+//message RpcChannel
 //{
 //  repeated RpcRouterItem items = 1;
 //}

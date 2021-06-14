@@ -2,82 +2,46 @@ package console
 
 import (
 	"bufio"
-	"github.com/name5566/leaf/conf"
-	"github.com/name5566/leaf/network"
-	"math"
-	"strconv"
+	"github.com/name5566/leaf/log"
+	"os"
 	"strings"
 )
+var reader = bufio.NewReader(os.Stdin)
+var commands = map[string]func(args...interface{}) {}
 
-var server *network.TCPServer
-
-func Init() {
-	if conf.ConsolePort == 0 {
-		return
-	}
-
-	server = new(network.TCPServer)
-	server.Addr = "localhost:" + strconv.Itoa(conf.ConsolePort)
-	server.MaxConnNum = int(math.MaxInt32)
-	server.PendingWriteNum = 100
-	server.NewAgent = newAgent
-
-	server.Start()
+func Register(command string,commandFunc func(args...interface{})) {
+	commands[command] = commandFunc
 }
 
-func Destroy() {
-	if server != nil {
-		server.Close()
-	}
+func Start() {
+	go run()
 }
 
-type Agent struct {
-	conn   *network.TCPConn
-	reader *bufio.Reader
-}
-
-func newAgent(conn *network.TCPConn) network.Agent {
-	a := new(Agent)
-	a.conn = conn
-	a.reader = bufio.NewReader(conn)
-	return a
-}
-
-func (a *Agent) Run() {
+func run() {
 	for {
-		if conf.ConsolePrompt != "" {
-			a.conn.Write([]byte(conf.ConsolePrompt))
-		}
-
-		line, err := a.reader.ReadString('\n')
+		read_line, err := reader.ReadString('\n')
 		if err != nil {
 			break
 		}
-		line = strings.TrimSuffix(line[:len(line)-1], "\r")
 
-		args := strings.Fields(line)
-		if len(args) == 0 {
+		read_line = strings.TrimSuffix(read_line[:len(read_line)-1], "\r")
+		contents := strings.Fields(read_line)
+
+		if len(contents) < 2 {
 			continue
 		}
-		if args[0] == "quit" {
-			break
+
+		command := contents[0]
+		args_strings := contents[1:]
+		args := make([]interface{}, len(args_strings))
+		for k, v := range args_strings {
+			args[k] = v
 		}
-		var c Command
-		for _, _c := range commands {
-			if _c.name() == args[0] {
-				c = _c
-				break
-			}
-		}
-		if c == nil {
-			a.conn.Write([]byte("command not found, try `help` for help\r\n"))
-			continue
-		}
-		output := c.run(args[1:])
-		if output != "" {
-			a.conn.Write([]byte(output + "\r\n"))
+
+		if commandFunc,ok := commands[command];ok {
+			commandFunc(args...)
+		}else{
+			log.Error("command <%v> not find",command)
 		}
 	}
 }
-
-func (a *Agent) OnClose() {}

@@ -1,123 +1,96 @@
 package gate
 
 import (
-	"encoding/binary"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/name5566/leaf/common"
+	. "github.com/name5566/leaf/common"
 	"github.com/name5566/leaf/log"
+	. "github.com/name5566/leaf/msg"
 	"reflect"
 )
 
-//type gateHandler func(a Agent,msg proto.Message) (proto.Message,error)
 
-type Handler struct {
-	Cmd 			uint16
-	Func 			func(a Agent,msg *Message)
-	RequestId		uint16
-	ReplyId			uint16
-	RequestType 	reflect.Type
-	ReplyType 		reflect.Type
+type MsgProcessor struct {
+	handlers 		map[uint16]*MsgHandler
 }
-var handlerMap = map[uint16]*Handler{}
 
-func Register(requestMsg proto.Message,replyMsg proto.Message,handler func(a Agent,msg *Message)) {
+func NewMsgProcessor() *MsgProcessor {
+	p := new(MsgProcessor)
+	p.handlers = make(map[uint16]*MsgHandler)
+	return p
+}
+
+func (p *MsgProcessor) Register(requestMsg interface{},replyMsg interface{},handler func(a interface{},msg *Messagex) *Error) {
 	requestType := reflect.TypeOf(requestMsg)
-	if !common.CheckMessage(requestType) {
+	if !CheckMessage(requestType) {
 		log.Error("Register requestType:%v check message err",requestType)
 		return
 	}
 
 	var replyType reflect.Type
+	var replyId uint16
 	if replyMsg != nil {
 		replyType = reflect.TypeOf(replyMsg)
-		if !common.CheckMessage(replyType) {
+		replyId = GetMessageId(replyType)
+		if replyId == 0 {
 			log.Error("Register replyType:%v check message err",replyType)
 			return
 		}
 	}
 
-	requestId := common.GetMessageId(requestType)
-	if _,ok := handlerMap[requestId];ok {
+	requestId := GetMessageId(requestType)
+	if _,ok := p.handlers[requestId];ok {
 		log.Error("Register handler of %v exist",requestId)
 		return
 	}
 
-	h := new(Handler)
-	h.Cmd = requestId
-	h.Func = handler
-	h.RequestType = requestType
-	h.ReplyType = replyType
-	h.RequestId = requestId
-	if replyType != nil {
-		h.ReplyId = common.GetMessageId(replyType)
-	}
+	msgHandler := new(MsgHandler)
+	msgHandler.Func = handler
+	msgHandler.RequestId = requestId
+	msgHandler.RequestType = requestType
+	msgHandler.ReplayId = replyId
+	msgHandler.ReplyType = replyType
 
-	handlerMap[requestId] = h
+	p.handlers[requestId] = msgHandler
+}
+
+func (p *MsgProcessor) GetHandler(msgId uint16) *MsgHandler {
+	if msgHandler,ok := p.handlers[msgId];ok {
+		return msgHandler
+	}
+	return nil
 }
 
 
-func (h *Handler) Route(a Agent,msg *Message) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Error("Route [%v-%v] error~",msg.head.MsgId,msg.head.ID)
-		}
-	}()
-
-	h.Func(a,msg)
-}
-
-
-func Unmarshal(data []byte) (*Message,*Handler) {
-	if len(data) < 11 {
-		return nil,nil
+func (p *MsgProcessor) Exec(a interface{},request IMessage) (*Messagex,error) {
+	if request == nil {
+		return nil,fmt.Errorf("msg request is nil")
 	}
 
-	msg := &Message{}
-	msg.head.Type = MessageType(data[0])
-	msg.head.ID = binary.LittleEndian.Uint32(data[1:5])
-	msg.head.MsgId = binary.LittleEndian.Uint16(data[9:11])
-	if msg.head.Type != MessageType_Request && msg.head.Type != MessageType_Push {
-		return nil,nil
+	if request.GetMessageType() != MessageType_Msg {
+		return nil,fmt.Errorf("msg type is err")
 	}
 
-	handler,ok := handlerMap[msg.head.MsgId]
-	if !ok {
-		return nil,nil
+	msgId := request.GetMessageId()
+	msgHandler := p.GetHandler(msgId)
+	if msgHandler == nil {
+		return nil,fmt.Errorf("handler id-%v not find",msgId)
 	}
 
-	if handler.RequestType != nil {
-		msg.RequestMsg = reflect.New(handler.RequestType.Elem()).Interface().(proto.Message)
-		if err := proto.Unmarshal(data[11:],msg.RequestMsg);err != nil {
-			return nil,nil
-		}
+	var response *PbMessage = nil
+	if msgHandler.ReplayId != 0 {
+		response = new(PbMessage)
+		response.MsgHead.Type = request.GetMessageType()
+		response.MsgHead.ID = request.GetId()
+		response.MsgHead.MsgId = msgHandler.ReplayId
+		response.Data = reflect.New(msgHandler.ReplyType.Elem()).Interface().(proto.Message)
 	}
-	if handler.ReplyType != nil {
-		msg.ReplyMsg = reflect.New(handler.ReplyType.Elem()).Interface().(proto.Message)
+	msg := new(Messagex)
+	msg.Request = request
+	msg.Response = response
+
+	if err := msgHandler.Func(a,msg);err != nil {
+		msg.Response.SetError(err.Code())
 	}
-
-	return msg,handler
-}
-
-
-func Marshal(msgType MessageType,id uint32,errCode uint32,msg proto.Message) ([][]byte,error) {
-	headArray := make([]byte,11)
-	headArray[0] = byte(msgType)
-	binary.LittleEndian.PutUint32(headArray[1:5],id)
-	if errCode != 0 {
-		binary.LittleEndian.PutUint32(headArray[5:9],errCode)
-		return [][]byte{headArray},nil
-	}
-
-	if msgId := common.GetMessageId(reflect.TypeOf(msg));msgId == 0 {
-		return nil, fmt.Errorf("ss")
-	}else {
-		binary.LittleEndian.PutUint32(headArray[5:9], uint32(msgId))
-
-		msgArray, err := proto.Marshal(msg)
-		if err != nil {
-			return nil, err
-		}
-		return [][]byte{headArray, msgArray}, nil
-	}
+	return msg,nil
 }

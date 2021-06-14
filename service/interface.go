@@ -11,6 +11,9 @@ type IService interface {
 	Init(s interface{})
 	Destroy()
 	Run(closeSig chan bool)
+	//GetRpcHandler() *rpcx.RpcHandler
+	GetServiceType() string
+	GetServiceName() string
 }
 
 type service struct {
@@ -19,31 +22,34 @@ type service struct {
 	wg 			sync.WaitGroup
 }
 
-var servs []*service
+var servlist = []*service{}
+var servmap  = map[string]*service{}
 
 func Register(s IService) {
 	m := new(service)
 	m.s = s
 	m.closeSig = make(chan bool, 1)
 
-	servs = append(servs, m)
+	servlist = append(servlist, m)
 }
 
 func Init() {
-	for _, s := range servs {
+	for _, s := range servlist {
 		s.s.Init(s.s)
 	}
+}
 
-	for i := 0; i < len(servs); i++ {
-		m := servs[i]
+func Start() {
+	for i := 0; i < len(servlist); i++ {
+		m := servlist[i]
 		m.wg.Add(1)
 		go run(m)
 	}
 }
 
 func Destroy() {
-	for i := len(servs) - 1; i >= 0; i-- {
-		m := servs[i]
+	for i := len(servlist) - 1; i >= 0; i-- {
+		m := servlist[i]
 		m.closeSig <- true
 		m.wg.Wait()
 		destroy(m)
